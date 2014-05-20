@@ -12,6 +12,7 @@
         android:layout_marginBottom="28dp" />
 
     <Button
+        android:id="@+id/main_open_file_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
@@ -24,6 +25,7 @@
         android:layout_marginBottom="28dp" />
     
     <Button
+        android:id="@+id/main_about_app"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
