@@ -3,8 +3,8 @@ package com.microsoft.checksumer;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -26,16 +26,26 @@ public class MainActivity extends Activity {
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent("org.openintents.action.PICK_FILE");
-                intent.putExtra("org.openintents.extra.TITLE", "Open File");
-                intent.putExtra("org.openintents.extra.BUTTON_TEXT", "Open");
+                PackageManager manager = thisActivity.getPackageManager();
+
+                Intent intent = new Intent("android.intent.action.GET_CONTENT");
+                intent.addCategory("android.intent.category.DEFAULT");
+                intent.setType("*/*");
                 int requestCode = REQUEST_CODE_PICK_FILE;
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                    intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                    intent.addCategory(Intent.CATEGORY_OPENABLE);
-                    requestCode = REQUEST_CODE_OPEN_DOCUMENT;
+                if (manager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY).isEmpty()) {
+                    Log.d("CheckSumer-MainActivity", "Unable to resolve intent: " + intent.toString());
                 }
+                /*
+                 * if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                 * intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                 * intent.addCategory(Intent.CATEGORY_OPENABLE); requestCode =
+                 * REQUEST_CODE_OPEN_DOCUMENT; }
+                 * if(manager.queryIntentActivities(intent,
+                 * PackageManager.MATCH_DEFAULT_ONLY).isEmpty()) {
+                 * Log.d("CheckSumer-MainActivity", "Unable to resolve intent: "
+                 * + intent.toString()); }
+                 */
 
                 thisActivity.startActivityForResult(intent, requestCode);
             }
@@ -44,7 +54,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_CODE_PICK_FILE && resultCode == Activity.RESULT_OK) {
+        if (requestCode == REQUEST_CODE_PICK_FILE && resultCode == Activity.RESULT_OK && data != null) {
 
         }
 
