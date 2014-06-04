@@ -14,7 +14,7 @@ public class MainActivity extends Activity {
 
     private static final int REQUEST_CODE_OPEN_DOCUMENT = 42;
 
-    private static final int REQUEST_CODE_PICK_FILE = 1;
+    private static final int REQUEST_CODE_PICK_FILE = 1000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,13 +54,18 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_CODE_PICK_FILE && resultCode == Activity.RESULT_OK && data != null) {
-
+        if (requestCode == REQUEST_CODE_PICK_FILE && data != null && data.getData() != null) {
+            Intent intent = new Intent();
+            intent.setData(data.getData());
+            intent.setClass(getApplication(), CheckSumActivity.class);
+            startActivity(intent);
+            return;
         }
 
         if (requestCode == REQUEST_CODE_OPEN_DOCUMENT && resultCode == Activity.RESULT_OK && data != null) {
             Uri uri = data.getData();
+
             Log.i("MainActivity", "URI: " + uri.toString());
-        }
+         }
     }
 }
