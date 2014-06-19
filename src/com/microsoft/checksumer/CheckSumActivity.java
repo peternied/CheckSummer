@@ -51,10 +51,10 @@ public class CheckSumActivity extends Activity {
                     ContentResolver contentResolver = getContentResolver();
                     ContentProviderClient contentProvider = contentResolver.acquireContentProviderClient(fileUrl);
                     ParcelFileDescriptor descriptor = contentProvider.openFile(fileUrl, "r");
+                    FileInputStream fis = new FileInputStream(descriptor.getFileDescriptor());
                     int fileSize = (int)descriptor.getStatSize();
 
                     ByteArrayOutputStream memorySteam = new ByteArrayOutputStream(fileSize);
-                    FileInputStream fis = new FileInputStream(descriptor.getFileDescriptor());
                     copyStreamContents(fileSize, fis, memorySteam);
                     byte[] fileInMemory = memorySteam.toByteArray();
 
