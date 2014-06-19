@@ -1,5 +1,5 @@
 
-package com.microsoft.checksumer;
+package com.checksummer;
 
 import android.app.Activity;
 import android.content.Intent;

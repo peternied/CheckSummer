@@ -1,5 +1,5 @@
 
-package com.microsoft.checksumer;
+package com.checksummer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
