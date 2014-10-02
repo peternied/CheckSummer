@@ -5,36 +5,31 @@
     android:orientation="vertical"
     tools:context="${packageName}.${activityClass}" >
 
-    <Space
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="28dp"
-        android:layout_marginBottom="28dp" />
-
     <Button
         android:id="@+id/main_open_file_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:text="@string/main_file_open" />
-
-    <Space
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:text="@string/main_file_open"
         android:layout_marginTop="28dp"
         android:layout_marginBottom="28dp" />
-    
+
+    <Button
+        android:id="@+id/main_open_file_onedrive"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:text="@string/pick_from_onedrive"
+        android:layout_marginTop="28dp"
+        android:layout_marginBottom="28dp" />
+   
     <Button
         android:id="@+id/main_about_app"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:text="@string/main_app_about" />
-    
-    <Space
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:text="@string/main_app_about"
         android:layout_marginTop="28dp"
         android:layout_marginBottom="28dp" />
-
+    
 </LinearLayout>
