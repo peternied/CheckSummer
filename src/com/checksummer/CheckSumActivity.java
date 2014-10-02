@@ -3,9 +3,13 @@ package com.checksummer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -17,6 +21,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
+import android.os.RemoteException;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -32,9 +37,12 @@ public class CheckSumActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_check_sum);
 
-        if(getIntent().getData() == null)
+        Uri data = getIntent().getData();
+        if (data == null)
         {
-            Log.e("CheckSumer-CheckSumActivity", "No file source provided!");
+            final String noFileError = "No file source provided!";
+            Log.e(CheckSumActivity.class.getName(), noFileError);
+            throw new RuntimeException(noFileError);
         }
 
         if (savedInstanceState == null) {
@@ -42,40 +50,31 @@ public class CheckSumActivity extends Activity {
         }
 
         final Activity thisActivity = this;
+        
+        // Start a task to read the file into memory and then start up the checksuming process
         new AsyncTask<Uri, Long, String>() {
-            @SuppressWarnings("unchecked")
             @Override
             protected String doInBackground(Uri... params) {
-                Uri fileUrl = params[0];
+                final Uri fileUrl = params[0];
                 try {
-                    ContentResolver contentResolver = getContentResolver();
-                    ContentProviderClient contentProvider = contentResolver.acquireContentProviderClient(fileUrl);
-                    ParcelFileDescriptor descriptor = contentProvider.openFile(fileUrl, "r");
-                    FileInputStream fis = new FileInputStream(descriptor.getFileDescriptor());
-                    int fileSize = (int)descriptor.getStatSize();
-
-                    ByteArrayOutputStream memorySteam = new ByteArrayOutputStream(fileSize);
-                    copyStreamContents(fileSize, fis, memorySteam);
-                    byte[] fileInMemory = memorySteam.toByteArray();
-
-                    AsyncTask<Object, Long, String>[] backgroundTasks = new AsyncTask[] {
-                            generateTaskForCheckSumCalcuation(thisActivity, CheckSumType.SHA1, R.id.check_sum_sha1),
-                            generateTaskForCheckSumCalcuation(thisActivity, CheckSumType.SHA256, R.id.check_sum_sha256),
-                            generateTaskForCheckSumCalcuation(thisActivity, CheckSumType.MD5, R.id.check_sum_md5)
-                    };
-                    for (AsyncTask<Object, Long, String> task : backgroundTasks) {
-                        task.execute(fileInMemory);
+                    final byte[] fileInMemory;
+                    if (getIntent().getData().getScheme().equalsIgnoreCase("content")) {
+                        fileInMemory = getFileFromContent(fileUrl);
+                    } else {
+                        fileInMemory = getFileFromUrl(fileUrl);
                     }
-                } catch (Exception e) {
-                    Log.e("CheckSumer-CheckSumActivity", "Unexpected error: " + e.toString());
+                    startComputingChecksums(fileInMemory);
+                } catch (final Exception e) {
+                    Log.e(CheckSumActivity.class.getName(), String.format("Error while reading file %s, error: %s", fileUrl, e.getMessage()));
                 }
+
                 return params[0].toString();
             }
 
             protected void onPostExecute(String result) {
                 ((TextView)thisActivity.findViewById(R.id.check_sum_file_path)).setText(result);
             };
-        }.execute(getIntent().getData());
+        }.execute(data);
     }
 
     @Override
@@ -113,6 +112,9 @@ public class CheckSumActivity extends Activity {
         }
     }
 
+    /**
+     * Copies a stream around
+     */
     private static int copyStreamContents(int size, InputStream input, OutputStream output) throws IOException {
         byte[] buffer = new byte[size];
         int count = 0;
@@ -124,6 +126,9 @@ public class CheckSumActivity extends Activity {
         return count;
     }
 
+    /**
+     * Makes a task to generate checksums and then update UI elements with the results
+     */
     private static AsyncTask<Object, Long, String> generateTaskForCheckSumCalcuation(final Activity activity,
             final CheckSumType checkSumType, final int updatedViewResourceId) {
         return new AsyncTask<Object, Long, String>() {
@@ -142,6 +147,9 @@ public class CheckSumActivity extends Activity {
         };
     }
 
+    /**
+     * Creates a checksum with the native java libraries
+     */
     private static String generateCheckSum(CheckSumType checkSumType, byte[] sourceFile)
             throws NoSuchAlgorithmException {
         MessageDigest mDigest = MessageDigest.getInstance(checkSumType.digestCode);
@@ -153,6 +161,9 @@ public class CheckSumActivity extends Activity {
         return hexResult.toString();
     }
 
+    /**
+     * Supported Checksum algorithms
+     */
     protected enum CheckSumType {
         SHA1("SHA-1"), SHA256("SHA-256"), MD5("MD5");
         private CheckSumType(String digestCode)
@@ -160,5 +171,50 @@ public class CheckSumActivity extends Activity {
             this.digestCode = digestCode;
         }
         protected String digestCode;
+    }
+    
+    /**
+     * Kicks off all the checksum computation to be done by the app
+     */
+    @SuppressWarnings("unchecked")
+    private void startComputingChecksums(final byte[] fileInMemory) {
+        AsyncTask<Object, Long, String>[] backgroundTasks = new AsyncTask[] {
+                generateTaskForCheckSumCalcuation(CheckSumActivity.this, CheckSumType.SHA1, R.id.check_sum_sha1),
+                generateTaskForCheckSumCalcuation(CheckSumActivity.this, CheckSumType.SHA256, R.id.check_sum_sha256),
+                generateTaskForCheckSumCalcuation(CheckSumActivity.this, CheckSumType.MD5, R.id.check_sum_md5)
+        };
+        for (AsyncTask<Object, Long, String> task : backgroundTasks) {
+            task.execute(fileInMemory);
+        }
+    }
+
+    /**
+     * Gets a file from a content provider
+     */
+    private byte[] getFileFromContent(Uri fileUrl) throws RemoteException,
+            FileNotFoundException, IOException {
+        final ContentResolver contentResolver = getContentResolver();
+        final ContentProviderClient contentProvider = contentResolver.acquireContentProviderClient(fileUrl);
+        final ParcelFileDescriptor descriptor = contentProvider.openFile(fileUrl, "r");
+        final FileInputStream fis = new FileInputStream(descriptor.getFileDescriptor());
+        final int fileSize = (int)descriptor.getStatSize();
+        final ByteArrayOutputStream memorySteam = new ByteArrayOutputStream(fileSize);
+        copyStreamContents(fileSize, fis, memorySteam);
+        final byte[] fileInMemory = memorySteam.toByteArray();
+        return fileInMemory;
+    }
+
+    /**
+     * Gets a file from a url
+     */
+    private byte[] getFileFromUrl(final Uri fileUrl)
+            throws MalformedURLException, IOException {
+        final URL url = new URL(fileUrl.toString());
+        final URLConnection connection = url.openConnection();
+        final int fileSize = connection.getInputStream().available();
+        final ByteArrayOutputStream memorySteam = new ByteArrayOutputStream(fileSize);
+        copyStreamContents(fileSize, connection.getInputStream(), memorySteam);
+        final byte[] fileInMemory = memorySteam.toByteArray();
+        return fileInMemory;
     }
 }
