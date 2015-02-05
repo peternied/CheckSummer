@@ -2,8 +2,10 @@
 package com.checksummer;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -20,6 +22,7 @@ import android.content.ContentResolver;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.util.Log;
@@ -29,6 +32,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class CheckSumActivity extends Activity {
 
@@ -81,7 +85,7 @@ public class CheckSumActivity extends Activity {
     public boolean onCreateOptionsMenu(Menu menu) {
 
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.check_sum, menu);
+        getMenuInflater().inflate(R.menu.save_menus, menu);
         return true;
     }
 
@@ -91,7 +95,24 @@ public class CheckSumActivity extends Activity {
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-        if (id == R.id.action_settings) {
+        if (id == R.id.save_locally) {
+            final String outputText = getChecksumDetails();
+            new AsyncTask<Void, Void, Void>() {
+                @Override
+                protected Void doInBackground(Void... voids) {
+                    try {
+                        final File sdcard = Environment.getExternalStorageDirectory();
+                        final File outputFile = new File(sdcard.getAbsolutePath(), "savedChecksumInfo.txt");
+                        final FileWriter writer = new FileWriter(outputFile);
+                        writer.write(outputText);
+                        writer.close();
+                        Toast.makeText(CheckSumActivity.this, "Wrote saved checksum info to disk!", Toast.LENGTH_LONG).show();
+                    } catch (final IOException e) {
+                        Log.e("Checksum", "Error saving file!\n" + e.getMessage());
+                    }
+                    return null;
+                }
+            }.execute();
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -216,5 +237,19 @@ public class CheckSumActivity extends Activity {
         copyStreamContents(fileSize, connection.getInputStream(), memorySteam);
         final byte[] fileInMemory = memorySteam.toByteArray();
         return fileInMemory;
+    }
+
+    public String getChecksumDetails() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Checksum details for " + ((TextView) this.findViewById(R.id.check_sum_file_path)).getText());
+        sb.append("\n");
+        sb.append("\n");
+        sb.append(CheckSumType.MD5.toString() + ": " + ((TextView) this.findViewById(R.id.check_sum_md5)).getText());
+        sb.append("\n");
+        sb.append(CheckSumType.SHA1.toString() + ": " + ((TextView) this.findViewById(R.id.check_sum_sha1)).getText());
+        sb.append("\n");
+        sb.append(CheckSumType.SHA256.toString() + ": " + ((TextView) this.findViewById(R.id.check_sum_sha256)).getText());
+        sb.append("\n");
+        return sb.toString();
     }
 }
